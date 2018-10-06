@@ -6,4 +6,48 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(p8105.datasets)
+
 ```
+
+###Problem 1
+```{r problem_1_cleaning}
+data("brfss_smart2010")
+brfss_smart2010 = 
+  janitor::clean_names(brfss_smart2010) %>% 
+  filter(topic == "Overall Health")
+```
+
+###Problem 2
+```{r problem_2_cleaning}
+data("instacart")
+instacart
+```
+The data has information of some orders from customers, which includes the product information
+
+* the product names ordered by customers
+* the department of the product ordered by custormers
+* where is the product located in the inventory
+* has this product been reordered by this customer  
+
+and information about (what I define as) customer behavior  
+
+* at what time of the day was the order placed
+* in what order was the products added into the cart
+* how often does the customer order from instacart  
+
+The key variables are `order_id` (which identifies each order), `product_id`(which identifies each item perchased by a user) and `user_id`(which identifies the user).  
+For example, row 1 to row 8 is a order placed by customer with the `user_id` 112108, each row is a product ordered by this custormer. This user mainly perchased diary and produce for daily comsumption, along with a bottle of canned seafood. This user order his(her) groceries at 10am. His(her) last order on instacard was 9 days ago, and he(she) has ordered some of the products before. 
+This dataset has `r nrow(instacart)` rows and `r ncol(instacart)` variables.  
+
+To answer the questions: 
+```{r}
+instacart %>% 
+  group_by(aisle, aisle_id) %>% 
+  summarize(n_aisle = n()) %>% 
+  arrange(desc(n_aisle))
+```
+So we have 134 aisles. People are ordering the most item from fresh vegetables, with `aisle_id = 83`. 
+
+for the first plot the idea now is to have several panels according to different departments. Within each department try the histogram for each aisle. 
