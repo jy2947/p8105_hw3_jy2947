@@ -8,7 +8,7 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(p8105.datasets)
-
+library(patchwork)
 ```
 
 ###Problem 1
@@ -16,13 +16,69 @@ library(p8105.datasets)
 data("brfss_smart2010")
 brfss_smart2010 = 
   janitor::clean_names(brfss_smart2010) %>% 
-  filter(topic == "Overall Health")
+  filter(topic == "Overall Health") %>% 
+  rename(state = locationabbr, location = locationdesc)
+brfss_smart2010$response  = factor(brfss_smart2010$response, levels = c("Excellent", "Very good", "Good", "Fair", "Poor"))
 ```
+
+```{r some_answer}
+brfss_smart2010 %>% 
+  filter(year == 2002) %>% 
+  group_by(state, location) %>% 
+  summarize(n_location = n()) %>% 
+  summarize(n_location = n()) %>% 
+  filter(n_location == 7)
+```
+
+Connecticut, Florida, North Carolina were observed at 7 locations.   
+
+```{r spaghetti} 
+brfss_smart2010 %>% 
+  select(year, state,location) %>% 
+  distinct() %>% 
+  group_by(state, year) %>% 
+  summarize(n_location = n()) %>% 
+  ggplot(aes(x = year, y = n_location)) +
+  geom_line(aes(color = state)) +
+  labs(
+    title = "Number of observed location in each states in 2002 - 2010",
+    x = "Year",
+    y = "Number of observed location",
+    caption = "Data from brfss_smart2010"
+  ) +
+  scale_x_continuous(breaks = c(2002, 2003, 2004, 2005, 2006, 2007, 
+                                2008, 2009, 2010),
+                     labels = c("2002", "2003", "2004", "2005", "2006", 
+                                "2007", "2008", "2009", "2010"),
+                     limits = c(2002,2010))
+```
+
+```{r table}
+brfss_smart2010 %>% 
+  select(year, response, state, location, data_value) %>% 
+  filter(year == "2002" | year == "2006" | year == "2010", 
+         response == "Excellent", state == "NY") %>% 
+  group_by(year) %>% 
+  summarize(mean_excellent_NY = round(mean(data_value), digits = 1),
+            sd_excellent_NY = round(sd(data_value), digits = 1))
+```
+```{r response_distribution}
+brfss_smart2010 %>% 
+  select(year, state, location, response, data_value) %>% 
+  group_by(year, state, response) %>% 
+  summarise(mean_response_prop = round(mean(data_value), digits = 1)) %>% 
+  ggplot(aes(x = year, y = mean_response_prop)) +
+  geom_line(aes(color = state)) +
+  facet_grid(~response) +
+  theme(legend.position = "bottom")
+
+```
+
+
 
 ###Problem 2
 ```{r problem_2_cleaning}
 data("instacart")
-instacart
 ```
 The data has information of some orders from customers, which includes the product information
 
@@ -50,4 +106,42 @@ instacart %>%
 ```
 So we have 134 aisles. People are ordering the most item from fresh vegetables, with `aisle_id = 83`. 
 
-for the first plot the idea now is to have several panels according to different departments. Within each department try the histogram for each aisle. 
+```{r first_plot}
+
+instacart %>% 
+  filter(department == "alcohol") %>% 
+  group_by(aisle) %>% 
+  summarize(n_aisle = n()) %>% 
+  ggplot(aes(x = aisle, y = n_aisle)) +
+  geom_point(aes(color = aisle))
+#doesn't work
+instacart %>% 
+  group_by(aisle, department) %>% 
+  summarize(n_aisle = n(), n_department = n()) %>% 
+  ggplot(aes(x = aisle, y = n_aisle)) +
+  geom_point(alpha = 0.5)
+
+  ggplot(aes(x = department, y = n_department)) +
+  geom_point(aes()) +
+  facet_wrap(~ department)
+```
+
+for the first plot the idea now is to have several panels for different departments.(No idea how to work that out for now) Within each department try the histogram(histogram requires the X-axis data to be continuous, so might use geom_col/ or just points) for each aisle. 
+
+###Problem 3
+```{r load data}
+data("ny_noaa")
+ny_noaa = 
+  janitor::clean_names(ny_noaa) %>% 
+  filter(!is.na(snow), !is.na(snwd),
+         !is.na(tmax), !is.na(tmin))
+ny_noaa %>%  
+  group_by(id) %>% 
+  summarize(n_id = n())
+ny_noaa = 
+  filter(ny_noaa, id == "USC00300023" | id == "USC00300093" | id == "USC00300331")
+ny_noaa %>% 
+  select(id, tmax, tmin) %>% 
+  gather(key = observation, value = temp, tmax:tmin)
+```
+
