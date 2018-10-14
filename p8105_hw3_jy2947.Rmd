@@ -9,6 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(p8105.datasets)
 library(patchwork)
+library(viridis)
 ```
 
 ###Problem 1
@@ -50,8 +51,11 @@ brfss_smart2010 %>%
                                 2008, 2009, 2010),
                      labels = c("2002", "2003", "2004", "2005", "2006", 
                                 "2007", "2008", "2009", "2010"),
-                     limits = c(2002,2010))
+                     limits = c(2002,2010)) +
+  geom_text(aes(label = state), check_overlap = TRUE)
 ```
+
+The spaghetti plot shows most states has less than 10 observed location during 2002 - 2010. Florida had more than 40 observed locations in 2007 and 2010, but only had around or less than 10 in other years, which is interesting. New Jersy had around 20 observed locations after 2005.  
 
 ```{r table}
 brfss_smart2010 %>% 
@@ -62,6 +66,9 @@ brfss_smart2010 %>%
   summarize(mean_excellent_NY = round(mean(data_value), digits = 1),
             sd_excellent_NY = round(sd(data_value), digits = 1))
 ```
+
+In NY state about one-fifth people thought their overall health was excellent in 2002, 2006, and 2010. The mean excellent proportion in 2006 and 2010 is about the same, in 2002 it is a bit higher. There is some variance in different location in NY state, but not very much.   
+
 ```{r response_distribution}
 brfss_smart2010 %>% 
   select(year, state, location, response, data_value) %>% 
@@ -69,10 +76,18 @@ brfss_smart2010 %>%
   summarise(mean_response_prop = round(mean(data_value), digits = 1)) %>% 
   ggplot(aes(x = year, y = mean_response_prop)) +
   geom_line(aes(color = state)) +
+  labs(title = "Mean response proportion for 5 responses in states (2002-2010)",
+       x = "Year",
+       y = "Mean response proportion(%)",
+       caption = "Data from brfss") +
   facet_grid(~response) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "right",
+        legend.text = element_text(size = 4),
+        legend.key.size = unit(0.4, "cm"))
 
 ```
+
+For most states, 30% - 40% people think their overall health is very good, but not excellent in 2002 - 2010. Less than 10% people thinks their overall health is poor. Generally speaking the majority of people thinks their health status is good or better.  
 
 
 
@@ -80,22 +95,22 @@ brfss_smart2010 %>%
 ```{r problem_2_cleaning}
 data("instacart")
 ```
-The data has information of some orders from customers, which includes the product information
+The data has information of some orders from customers, which includes product information:  
 
 * the product names ordered by customers
 * the department of the product ordered by custormers
 * where is the product located in the inventory
 * has this product been reordered by this customer  
 
-and information about (what I define as) customer behavior  
+and information about (what I define as) customer behavior:  
 
 * at what time of the day was the order placed
 * in what order was the products added into the cart
 * how often does the customer order from instacart  
 
-The key variables are `order_id` (which identifies each order), `product_id`(which identifies each item perchased by a user) and `user_id`(which identifies the user).  
+This dataset has `r nrow(instacart)` rows and `r ncol(instacart)` variables. The key variables are `order_id` (which identifies each order), `product_id`(which identifies each item perchased by a user) and `user_id`(which identifies the user).  
 For example, row 1 to row 8 is a order placed by customer with the `user_id` 112108, each row is a product ordered by this custormer. This user mainly perchased diary and produce for daily comsumption, along with a bottle of canned seafood. This user order his(her) groceries at 10am. His(her) last order on instacard was 9 days ago, and he(she) has ordered some of the products before. 
-This dataset has `r nrow(instacart)` rows and `r ncol(instacart)` variables.  
+  
 
 To answer the questions: 
 ```{r}
@@ -107,23 +122,19 @@ instacart %>%
 So we have 134 aisles. People are ordering the most item from fresh vegetables, with `aisle_id = 83`. 
 
 ```{r first_plot}
-
-instacart %>% 
-  filter(department == "alcohol") %>% 
+instacart %>%  
   group_by(aisle) %>% 
   summarize(n_aisle = n()) %>% 
-  ggplot(aes(x = aisle, y = n_aisle)) +
-  geom_point(aes(color = aisle))
-#doesn't work
-instacart %>% 
-  group_by(aisle, department) %>% 
-  summarize(n_aisle = n(), n_department = n()) %>% 
-  ggplot(aes(x = aisle, y = n_aisle)) +
-  geom_point(alpha = 0.5)
-
-  ggplot(aes(x = department, y = n_department)) +
-  geom_point(aes()) +
-  facet_wrap(~ department)
+  arrange(desc(n_aisle)) %>%
+  ggplot(aes(x = reorder(aisle, n_aisle), y = n_aisle)) +
+  geom_col() +
+  labs(title = "Total number of items ordered in each aisle", 
+       x = "Aisle",
+       y = "Total number of items ordered",
+       caption = "Data from instacart") +
+  theme_classic() +
+  theme(legend.position = "none") +
+  coord_flip()
 ```
 
 for the first plot the idea now is to have several panels for different departments.(No idea how to work that out for now) Within each department try the histogram(histogram requires the X-axis data to be continuous, so might use geom_col/ or just points) for each aisle. 
@@ -132,16 +143,83 @@ for the first plot the idea now is to have several panels for different departme
 ```{r load data}
 data("ny_noaa")
 ny_noaa = 
-  janitor::clean_names(ny_noaa) %>% 
-  filter(!is.na(snow), !is.na(snwd),
-         !is.na(tmax), !is.na(tmin))
-ny_noaa %>%  
-  group_by(id) %>% 
-  summarize(n_id = n())
-ny_noaa = 
-  filter(ny_noaa, id == "USC00300023" | id == "USC00300093" | id == "USC00300331")
-ny_noaa %>% 
-  select(id, tmax, tmin) %>% 
-  gather(key = observation, value = temp, tmax:tmin)
+  janitor::clean_names(ny_noaa)
+
 ```
 
+This dataset contains some information of weather at different locations in the US. It has `r nrow(ny_noaa)` observations and `r ncol(ny_noaa)` variables. It identifies a place by the id, and have information about the max and min temperature, percipitation, snow and snwd $what is this$ on a specific day from 1993 to 2010. There are lot of data missing. 
+
+```{r some_cleaning}
+ny_noaa = 
+  separate(ny_noaa, date, into = c("year", "month", "day")) %>% 
+  mutate(prcp_mm = ifelse(is.na(prcp), NA, prcp / 10),
+         tmax_c  = ifelse(is.na(tmax), NA, as.numeric(tmax) / 10),
+         tmin_c  = ifelse(is.na(tmin), NA, as.integer(tmin) / 10)) %>%
+  rename(snow_mm = snow, sn_depth_mm = snwd) %>% 
+  select(-prcp, -tmax, -tmin)
+
+ny_noaa %>% 
+  group_by(snow_mm) %>% 
+  summarise(n_snowfall = n()) %>% 
+  arrange(desc(n_snowfall))
+```
+
+The most frequent value for `snowfall` is 0, which means it is not snowing in the location on that day. 
+
+```{r max_temp_plot}
+knitr::opts_chunk$set(
+  fig.width = 20,
+  fig.height = 20
+)
+max_temp =
+  ny_noaa %>% 
+  select(id,year, month, snow_mm, tmax_c) %>% 
+  filter(month == "01" | month == "07") %>% 
+  group_by(year,id, month) %>% 
+  summarise(mean_max = round(mean(tmax_c, na.rm = TRUE), digits = 1)) %>%
+  filter(!is.na(mean_max))
+
+ggplot(max_temp, aes(x = year, y = mean_max)) + 
+  geom_point(aes(color = id)) +
+  labs(
+#    title = "Max tempreture in NY weather stations in January and July (1991-2010)", 
+    y = "Tempreture (°C)", 
+    x = "Year",
+    caption = "Data from ny_noaa package") +
+  scale_x_discrete(breaks = c(1981, 1985, 1990, 1995, 2000, 2005, 2010),
+                     labels = c("1981", "1985", "1990", "1995", "2000", "2005", "2010")) +
+  scale_y_continuous(breaks = c(-10, 0, 10, 20, 30),
+                     labels = c("-10°C", "0", "10", "20", "30")) +
+  theme(legend.position = "none") +
+  facet_grid(~month)
+```
+
+
+
+```{r tmax_tmin}  
+tmax_min = 
+  ggplot(ny_noaa, aes(x = tmin_c, y = tmax_c)) +
+  geom_bin2d() +
+  labs(title = "Tempreture in NY in 1981 - 2010", 
+       x = "Minimun tempreture(°C)", 
+       y = "Maximum tempreture(°C)") +
+  theme_classic() +
+  theme(legend.position = c(0.95, 0.3))
+
+snowfall =
+  ny_noaa %>% 
+    filter(snow_mm > 0 & snow_mm < 100) %>% 
+    ggplot(aes(x = snow_mm)) +
+    geom_density(aes(color = year), alpha = 0.05) +
+    labs(title = "Distribution of snowfall between 0 and 100 by year", 
+         x = "Snowfall (mm)", 
+         y = "Distribution",
+         caption = "Data from ny_noaa") +
+    theme_classic() +
+    theme(legend.position = c(0.9, 0.65),
+          legend.key.size = unit(0.1, "cm"), 
+          legend.text = element_text(size = 7),
+          legend.direction = "vertical")
+    
+tmax_min/snowfall
+```
