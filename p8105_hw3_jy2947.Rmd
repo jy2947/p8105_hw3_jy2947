@@ -10,16 +10,20 @@ library(tidyverse)
 library(p8105.datasets)
 library(patchwork)
 library(viridis)
+library(knitr)
 ```
 
 ###Problem 1
+
+Load the data, filter the data of interest, some cleaning.  
 ```{r problem_1_cleaning}
 data("brfss_smart2010")
 brfss_smart2010 = 
   janitor::clean_names(brfss_smart2010) %>% 
   filter(topic == "Overall Health") %>% 
   rename(state = locationabbr, location = locationdesc)
-brfss_smart2010$response  = factor(brfss_smart2010$response, levels = c("Excellent", "Very good", "Good", "Fair", "Poor"))
+brfss_smart2010$response  = factor(brfss_smart2010$response, 
+                                   levels = c("Excellent", "Very good", "Good", "Fair", "Poor"))
 ```
 
 ```{r some_answer}
@@ -42,7 +46,7 @@ brfss_smart2010 %>%
   ggplot(aes(x = year, y = n_location)) +
   geom_line(aes(color = state)) +
   labs(
-    title = "Number of observed location in each states in 2002 - 2010",
+    title = "Number of observed locations in each states in 2002 - 2010",
     x = "Year",
     y = "Number of observed location",
     caption = "Data from brfss_smart2010"
@@ -55,7 +59,7 @@ brfss_smart2010 %>%
   geom_text(aes(label = state), check_overlap = TRUE)
 ```
 
-The spaghetti plot shows most states has less than 10 observed location during 2002 - 2010. Florida had more than 40 observed locations in 2007 and 2010, but only had around or less than 10 in other years, which is interesting. New Jersy had around 20 observed locations after 2005.  
+The spaghetti plot shows most states has less than 10 observed location during 2002 - 2010. Florida had more than 40 observed locations in 2007 and 2010, but only had around or less than 10 in other years, which is interesting. New Jersy ranked the second and had around 20 observed locations after 2005.  
 
 ```{r table}
 brfss_smart2010 %>% 
@@ -64,7 +68,8 @@ brfss_smart2010 %>%
          response == "Excellent", state == "NY") %>% 
   group_by(year) %>% 
   summarize(mean_excellent_NY = round(mean(data_value), digits = 1),
-            sd_excellent_NY = round(sd(data_value), digits = 1))
+            sd_excellent_NY = round(sd(data_value), digits = 1)) %>% 
+  kable()
 ```
 
 In NY state about one-fifth people thought their overall health was excellent in 2002, 2006, and 2010. The mean excellent proportion in 2006 and 2010 is about the same, in 2002 it is a bit higher. There is some variance in different location in NY state, but not very much.   
@@ -76,10 +81,13 @@ brfss_smart2010 %>%
   summarise(mean_response_prop = round(mean(data_value), digits = 1)) %>% 
   ggplot(aes(x = year, y = mean_response_prop)) +
   geom_line(aes(color = state)) +
+  scale_x_continuous(breaks = c(2002, 2006, 2010),
+                   labels = c("2002", "2006", "2010")) +
   labs(title = "Mean response proportion for 5 responses in states (2002-2010)",
        x = "Year",
        y = "Mean response proportion(%)",
        caption = "Data from brfss") +
+  
   facet_grid(~response) +
   theme(legend.position = "right",
         legend.text = element_text(size = 4),
@@ -137,7 +145,30 @@ instacart %>%
   coord_flip()
 ```
 
-for the first plot the idea now is to have several panels for different departments.(No idea how to work that out for now) Within each department try the histogram(histogram requires the X-axis data to be continuous, so might use geom_col/ or just points) for each aisle. 
+```{r popular_item}
+instacart %>% 
+  filter(aisle == "baking ingredients" |
+         aisle == "dog food care" |
+         aisle == "packaged vegetables fruits") %>%
+  group_by(aisle, product_name) %>% 
+  summarise(item_count = n()) %>% 
+  arrange(desc(item_count)) %>% 
+  top_n(1, item_count)
+```
+
+```{r hour_of_day}
+instacart %>% 
+  filter(product_name == "Pink Lady Apples" |
+         product_name == "Coffee Ice Cream") %>% 
+  group_by(product_name, order_dow) %>% 
+  summarise(mean_hour = round(mean(order_hour_of_day), digits = 1)) %>%
+  spread(order_dow, mean_hour) %>% 
+  rename(Sunday = "0", Monday = "1", Tuesday = "2", 
+         Wednesday = "3", Thursday = "4", Friday = "5", Saturday = "6")
+  
+```
+
+
 
 ###Problem 3
 ```{r load data}
