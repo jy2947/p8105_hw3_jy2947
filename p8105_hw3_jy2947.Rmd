@@ -133,16 +133,15 @@ So we have 134 aisles. People are ordering the most item from fresh vegetables, 
 instacart %>%  
   group_by(aisle) %>% 
   summarize(n_aisle = n()) %>% 
-  arrange(desc(n_aisle)) %>%
   ggplot(aes(x = reorder(aisle, n_aisle), y = n_aisle)) +
-  geom_col() +
+  geom_bar(stat = "identity") +
   labs(title = "Total number of items ordered in each aisle", 
        x = "Aisle",
        y = "Total number of items ordered",
        caption = "Data from instacart") +
+  coord_flip() +
   theme_classic() +
-  theme(legend.position = "none") +
-  coord_flip()
+  theme(legend.position = "none")
 ```
 
 ```{r popular_item}
@@ -153,7 +152,8 @@ instacart %>%
   group_by(aisle, product_name) %>% 
   summarise(item_count = n()) %>% 
   arrange(desc(item_count)) %>% 
-  top_n(1, item_count)
+  top_n(1, item_count) %>% 
+  kable()
 ```
 
 ```{r hour_of_day}
@@ -164,7 +164,8 @@ instacart %>%
   summarise(mean_hour = round(mean(order_hour_of_day), digits = 1)) %>%
   spread(order_dow, mean_hour) %>% 
   rename(Sunday = "0", Monday = "1", Tuesday = "2", 
-         Wednesday = "3", Thursday = "4", Friday = "5", Saturday = "6")
+         Wednesday = "3", Thursday = "4", Friday = "5", Saturday = "6") %>% 
+  kable()
   
 ```
 
@@ -175,7 +176,6 @@ instacart %>%
 data("ny_noaa")
 ny_noaa = 
   janitor::clean_names(ny_noaa)
-
 ```
 
 This dataset contains some information of weather at different locations in the US. It has `r nrow(ny_noaa)` observations and `r ncol(ny_noaa)` variables. It identifies a place by the id, and have information about the max and min temperature, percipitation, snow and snwd $what is this$ on a specific day from 1993 to 2010. There are lot of data missing. 
